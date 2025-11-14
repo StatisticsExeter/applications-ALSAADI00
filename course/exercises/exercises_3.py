@@ -9,7 +9,7 @@ def box_plot(df, cat_var, cont_var):
     return a box plot as a plotly express object
     which summarises the distribution of the continuous variable for
     different levels of cat_var."""
-    fig=px.box(df,x=cat_var,y=cont_var)
+    fig = px.box(df, x=cat_var, y=cont_var)
     return fig
 
 
@@ -20,7 +20,7 @@ def scatterplot(df, xvar, yvar):
       - a string 'yvar' denoting a continuous variable
     return a scatterplot plot as a plotly express object
     of the x variable against the y variable."""
-    fig=px.scatter(df,x=xvar,y=yvar)
+    fig = px.scatter(df, x=xvar, y=yvar)
     return fig
 
 
@@ -33,7 +33,7 @@ def scatterplot_groups(df, xvar, yvar, groups):
     return a scatterplot plot as a plotly express object
     of the x variable against the y variable that has
     markers colours for different levels of the grouping variable."""
-    fig=px.scatter(df, x=xvar, y=yvar, color=groups)
+    fig = px.scatter(df, x=xvar, y=yvar, color=groups)
     return fig
 
 
@@ -43,10 +43,10 @@ def scatterplot_matrix(df, numeric_cols):
       - a list 'numeric_cols' denoting several of the continuous variables
     return a scatterplot plotmatrix as a plotly express object
     plotting each continuous variable against the others."""
-    fig=px.scatter_matrix(df,dimensions=numeric_cols)
+    fig = px.scatter_matrix(df, dimensions=numeric_cols)
     return fig
 
-import plotly.express as px
+
 def bar_chart_means(df, cat_var, continuous_var, labels):
     """Given
       - data frame df,
@@ -59,8 +59,8 @@ def bar_chart_means(df, cat_var, continuous_var, labels):
     of cat_var and labels the axes using the labels dict."""
     means = (
         df.groupby(cat_var, dropna=False)[continuous_var]
-          .mean()
-          .reset_index(name=continuous_var)
+        .mean()
+        .reset_index(name=continuous_var)
     )
 
     title_txt = f"Average {continuous_var} by {cat_var}"

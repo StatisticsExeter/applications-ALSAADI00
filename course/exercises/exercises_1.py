@@ -1,5 +1,3 @@
-
-
 def sum_list(numbers):
     """Return the sum of all elements in the list 'numbers'."""
     return sum(numbers)

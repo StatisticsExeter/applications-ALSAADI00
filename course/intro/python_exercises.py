@@ -1,88 +1,61 @@
-from datetime import datetime
+def sum_list(numbers):
+    """Given a list of integers 'numbers'
+    return the sum of this list."""
+    return sum(numbers)
 
 
-def sum_list(x):
-    """Return the sum of a list x."""
-    return sum(x)
-
-
-def squares(x):
-    """Return a list containing the squares of x."""
-    return [i * i for i in x]
-
-
-def evens(x):
-    """Return a list containing only the even numbers in x."""
-    return [i for i in x if i % 2 == 0]
-
-
-def mean(x):
-    """Return the mean of the list x."""
-    return sum(x) / len(x)
+def max_value(numbers):
+    """Given a list of numbers 'numbers'
+    return the maximum value of this list."""
+    return max(numbers)
 
 
 def reverse_string(s):
-    """Return the reverse of the string s."""
+    """Given a string 'string'
+    return the reversed version of the input string."""
     return s[::-1]
 
 
-def max_value(x):
-    """Return the maximum value in the list x."""
-    return max(x)
-
-
-def filter_even(x):
-    """Return a list containing only the even numbers in x."""
-    return [i for i in x if i % 2 == 0]
+def filter_even(numbers):
+    """Given a list of numbers 'numbers'
+    return a list containing only the even numbers from the input list."""
+    return [i for i in numbers if i % 2 == 0]
 
 
 def get_fifth_row(df):
-    """Return the fifth row of the DataFrame df."""
+    """Given a dataframe 'df'
+    return the fifth row of this as a pandas DataFrame."""
     return df.iloc[4]
 
 
-def column_mean(df, col_name):
-    """Return the mean of the column col_name in the DataFrame df."""
-    return df[col_name].mean()
+def column_mean(df, column):
+    """Given a dataframe 'df' and the name of a column 'column'
+    return the mean of the specified column in a pandas DataFrame."""
+    return df[column].mean()
 
 
-def lookup_key(data, key, key_col=None, value_col=None):
-    """
-    Look up a key and return the corresponding value.
-
-    If data is a dict or Series and key_col/value_col are None, return data[key].
-    If data is a DataFrame and key_col and value_col are given, find the row where
-    data[key_col] == key and return the value from value_col. If key is not found,
-    return None.
-    """
-    if key_col is None and value_col is None:
-        return data.get(key, None)
-
-    rows = data[data[key_col] == key]
-    if rows.empty:
-        return None
-    return rows[value_col].iloc[0]
+def lookup_key(d, key):
+    """Given a dictionary 'd' and a key 'key'
+    return the value associated with the key in the dictionary."""
+    return d[key]
 
 
-def count_occurrences(x):
-    """
-    Return a dict mapping each unique value in x to the number of times it appears.
-    """
+def count_occurrences(lst):
+    """Given a list 'lst'
+    return a dictionary with counts of each unique element in the list."""
     counts = {}
-    for value in x:
+    for value in lst:
         counts[value] = counts.get(value, 0) + 1
     return counts
 
 
-def list_to_string(x, sep=","):
-    """
-    Convert a list x to a single string, joining elements with sep.
-    """
-    return sep.join(str(v) for v in x)
+def drop_missing(df):
+    """Given a dataframe 'df' with some rows containing missing values,
+    return a DataFrame with rows containing missing values removed."""
+    return df.dropna()
 
 
-def parse_date(date_str):
-    """
-    Parse a date string in the form 'YYYY-MM-DD' and return a date object.
-    """
-    return datetime.strptime(date_str, "%Y-%m-%d").date()
+def value_counts_df(df, column):
+    """Given a dataframe 'df' with various columns and the name of one of those columns 'column',
+    return a DataFrame with value counts of the specified column."""
+    return df[column].value_counts()

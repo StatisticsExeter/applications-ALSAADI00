@@ -16,11 +16,7 @@ def plot_scatter():
 
 
 def _scatter(df, title):
-    """When called with dataframe 'df' and a string 'title'
-    Return a plotlty express object which is a scatterplot of all numeric variables
-    in the dataframe. The title should be as provided in the function call"""
-    x_col = df.columns[0]
-    y_col = df.columns[1]
-
-    fig = px.scatter(df, x=x_col, y=y_col, title=title)
+    """Return a scatter-matrix Plotly figure over all numeric columns with a title."""
+    fig = px.scatter_matrix(df)
+    fig.update_layout(title=title)
     return fig

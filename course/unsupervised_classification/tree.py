@@ -35,33 +35,41 @@ def hierarchical_groups(height):
 
 
 def _fit_dendrogram(df):
-    """Given a dataframe containing only suitable values
-    Return a scipy.cluster.hierarchy hierarchical clustering solution to these data"""
-    return 0
+    Z = linkage(df if not isinstance(df, pd.DataFrame) else df.values, method="ward")
+    return Z
 
 
 def _plot_dendrogram(df):
-    """Given a dataframe df containing only suitable variables
-    Use plotly.figure_factory to plot a dendrogram of these data"""
-    return 0
+    """Return a Plotly dendrogram figure for the given data (DataFrame or ndarray)."""
+    data = df.values if isinstance(df, pd.DataFrame) else df
+    fig = ff.create_dendrogram(
+        data,
+        linkagefun=lambda x: linkage(x, method="ward")
+    )
+    fig.update_layout(title="Interactive Hierarchical Clustering Dendrogram")
+    return fig
 
 
 def _cutree(tree, height):
-    """Given a scipy.cluster.hierarchy hierarchical clustering solution and a float of the height
-    Cut the tree at that hight and return the solution (cluster group membership) as a
-    data frame with one column called 'cluster'"""
-    return 0
+    """Cut the tree at that height and return a DataFrame with one column 'cluster'."""
+    labels = fcluster(tree, t=height, criterion="distance")
+    return pd.DataFrame({"cluster": labels})
 
 
 def _pca(df):
-    """Given a dataframe of only suitable variables
-    return a dataframe of the first two pca predictions (z values) with columns 'PC1' and 'PC2'"""
-    return 0
+    """Return a DataFrame with the first two PCA components named 'PC1' and 'PC2'."""
+    p = PCA(n_components=2, random_state=0)
+    comps = p.fit_transform(df if not isinstance(df, pd.DataFrame) else df.values)
+    return pd.DataFrame(comps, columns=["PC1", "PC2"])
 
 
 def _scatter_clusters(df):
-    """Given a data frame containing columns 'PC1' and 'PC2' and 'cluster'
-      (the first two principal component projections and the cluster groups)
-    return a plotly express scatterplot of PC1 versus PC2
-    with marks to denote cluster group membership"""
-    return 0
+    """Return a Plotly scatter (PC1 vs PC2) colored by 'cluster'."""
+    fig = px.scatter(
+        df,
+        x="PC1",
+        y="PC2",
+        color="cluster",
+        title="PCA Scatter Plot Colored by Cluster Labels"
+    )
+    return fig

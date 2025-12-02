@@ -12,14 +12,45 @@ def plot_scatter():
     outpath = base_dir / VIGNETTE_DIR / 'scatterplot.html'
     title = "Energy variables showing different built_age type"
     fig = scatter_onecat(df, 'built_age', title)
+    outpath.parent.mkdir(parents=True, exist_ok=True)
     fig.write_html(outpath)
 
 
 def scatter_onecat(df, cat_column, title):
-    """Return a plotly express figure which is a scatterplot of all numeric columns in df
-    with markers/colours given by the text in column cat_column
-    and overall title specfied by title"""
-    return 0
+    # Ensure the categorical column exists
+    if cat_column not in df.columns:
+        raise ValueError(f"Column '{cat_column}' not found in dataframe")
+    # Select numeric columns
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    if not numeric_cols:
+        raise ValueError("No numeric columns found in dataframe to plot.")
+    # Create an index for x-axis (just row index)
+    df = df.copy()
+    df['__index__'] = range(len(df))
+    # Melt numeric columns to long format
+    long_df = df.melt(
+        id_vars=['__index__', cat_column],
+        value_vars=numeric_cols,
+        var_name='variable',
+        value_name='value'
+    )
+    # Build scatter with facet per variable
+    fig = px.scatter(
+        long_df,
+        x='__index__',
+        y='value',
+        color=cat_column,
+        facet_col='variable',
+        facet_col_wrap=3,
+        title=title,
+        labels={'__index__': 'Observation index', 'value': 'Value'}
+    )
+    # Make layout a bit nicer
+    fig.update_layout(
+        legend_title=cat_column,
+        margin=dict(l=40, r=40, t=60, b=40)
+    )
+    return fig
 
 
 def get_frequencies(df, cat_column):

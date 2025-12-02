@@ -17,27 +17,51 @@ def _get_roc_results(y_test_path, y_pred_prob_path):
 
 def plot_roc_curve():
     base_dir = find_project_root()
-    y_test_path = base_dir / 'data_cache' / 'energy_y_test.csv'
-    y_pred_prob_path = base_dir / 'data_cache' / 'models' / 'lda_y_pred_prob.csv'
-    lda_results = _get_roc_results(y_test_path, y_pred_prob_path)
-    y_pred_prob_path = base_dir / 'data_cache' / 'models' / 'qda_y_pred_prob.csv'
-    qda_results = _get_roc_results(y_test_path, y_pred_prob_path)
-    fig = _plot_roc_curve(lda_results, qda_results)
-    outpath = base_dir / 'data_cache' / 'vignettes' / 'supervised_classification' / 'roc.html'
+    y_test_path = base_dir / "data_cache" / "energy_y_test.csv"
+    lda_prob_path = base_dir / "data_cache" / "models" / "lda_y_pred_prob.csv"
+    qda_prob_path = base_dir / "data_cache" / "models" / "qda_y_pred_prob.csv"
+    logreg_prob_path = base_dir / "data_cache" / "models" / "logreg_y_pred_prob.csv"
+    lda_results = _get_roc_results(y_test_path, lda_prob_path)
+    qda_results = _get_roc_results(y_test_path, qda_prob_path)
+    logreg_results = _get_roc_results(y_test_path, logreg_prob_path)
+    fig = _plot_roc_curve(lda_results, qda_results, logreg_results)
+    outpath = (
+        base_dir
+        / "data_cache"
+        / "vignettes"
+        / "supervised_classification"
+        / "roc.html"
+    )
     fig.write_html(outpath)
 
 
-def _plot_roc_curve(lda_roc, qda_roc):
+def _plot_roc_curve(lda_roc, qda_roc, logreg_roc):
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=lda_roc['fpr'], y=lda_roc['tpr'],
-                             mode='lines',
-                             name=f'ROC curve from LDA (AUC = {lda_roc["roc_auc"]:.2f})'))
-    fig.add_trace(go.Scatter(x=qda_roc['fpr'], y=qda_roc['tpr'],
-                             mode='lines',
-                             name=f'ROC curve from QDA (AUC = {qda_roc["roc_auc"]:.2f})'))
-    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1],
-                             mode='lines',
-                             name='Random', line=dict(dash='dash')))
+    fig.add_trace(go.Scatter(
+        x=lda_roc['fpr'], y=lda_roc['tpr'],
+        mode='lines',
+        name=f'ROC curve from LDA (AUC = {lda_roc["roc_auc"]:.2f})'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=qda_roc['fpr'], y=qda_roc['tpr'],
+        mode='lines',
+        name=f'ROC curve from QDA (AUC = {qda_roc["roc_auc"]:.2f})'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=logreg_roc['fpr'], y=logreg_roc['tpr'],
+        mode='lines',
+        name=f'ROC curve from Logistic Regression (AUC = {logreg_roc["roc_auc"]:.2f})'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=[0, 1], y=[0, 1],
+        mode='lines',
+        name='Random',
+        line=dict(dash='dash')
+    ))
+
     fig.update_layout(
         title='ROC Curve',
         xaxis_title='False Positive Rate',
@@ -45,4 +69,6 @@ def _plot_roc_curve(lda_roc, qda_roc):
         width=700,
         height=500
     )
+
     return fig
+

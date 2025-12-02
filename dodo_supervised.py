@@ -1,9 +1,9 @@
 from pathlib import Path
 from doit.tools import config_changed
 from course.utils import load_pg_data
-from course.supervised_classification.classify import fit_qda, fit_lda
-from course.supervised_classification.predict import pred_lda, pred_qda
-from course.supervised_classification.metrics import metric_report_lda, metric_report_qda
+from course.supervised_classification.classify import fit_qda, fit_lda, fit_logreg
+from course.supervised_classification.predict import pred_lda, pred_qda, pred_logreg
+from course.supervised_classification.metrics import metric_report_lda, metric_report_qda, metric_report_logreg
 from course.supervised_classification.split_test_train import test_and_train
 from course.supervised_classification.eda import plot_scatter, get_summary_stats
 from course.supervised_classification.roc_curve import plot_roc_curve
@@ -88,6 +88,15 @@ def task_fit_qda():
       'targets': ['data_cache/models/qda_model.joblib']
     }
 
+def task_fit_logreg():
+    return {
+      'actions': [fit_logreg],
+      'file_dep': ['data_cache/energy_X_train.csv',
+                   'data_cache/energy_y_train.csv',
+                   'course/supervised_classification/classify.py'],
+      'targets': ['data_cache/models/logreg_model.joblib'],
+    }
+
 
 def task_predict_lda():
     return {
@@ -108,6 +117,16 @@ def task_predict_qda():
                   'data_cache/models/qda_y_pred_prob.csv',]
     }
 
+def task_predict_logreg():
+    return {
+      'actions': [pred_logreg],
+      'file_dep': ['data_cache/models/logreg_model.joblib',
+                   'data_cache/energy_X_test.csv',
+                   'course/supervised_classification/predict.py'],
+      'targets': ['data_cache/models/logreg_y_pred.csv',
+                  'data_cache/models/logreg_y_pred_prob.csv'],
+    }
+
 
 def task_metrics_lda():
     return {
@@ -126,11 +145,25 @@ def task_metrics_qda():
       'targets': ['data_cache/vignettes/supervised_classification/qda.csv']
     }
 
+def task_metrics_logreg():
+    return {
+      'actions': [metric_report_logreg],
+      'file_dep': [
+          'data_cache/models/logreg_y_pred.csv',
+          'data_cache/energy_y_test.csv',
+          'course/supervised_classification/metrics.py'
+      ],
+      'targets': ['data_cache/vignettes/supervised_classification/logreg.csv']
+    }
+
 
 def task_roc_curve():
     return {
       'actions': [plot_roc_curve],
-      'file_dep': ['data_cache/energy_y_test.csv',
-                   'data_cache/models/qda_y_pred_prob.csv'],
-      'targets': ['vignettes/supervised_classication/roc.html']
+      'file_dep': [
+          'data_cache/energy_y_test.csv',
+          'data_cache/models/lda_y_pred_prob.csv',
+          'data_cache/models/qda_y_pred_prob.csv',
+      ],
+      'targets': ['data_cache/vignettes/supervised_classification/roc.html'],
     }

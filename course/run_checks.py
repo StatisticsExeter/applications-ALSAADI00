@@ -2,9 +2,10 @@
 import os
 import sys
 import subprocess
+from pathlib import Path
 
 EXPECTED_ENV = "python-exercises"
-TEST_FILE = "course/intro/tests/test_db_connection.py"
+test_file = Path(__file__).parent / "intro" / "tests" / "test_db_connection.py"
 
 def get_active_conda_env():
     """
@@ -44,7 +45,7 @@ def main():
         sys.exit(1)
 
     print("Checking database connection via tests...")
-    exit_code = run_pytest(TEST_FILE)
+    exit_code = run_pytest(test_file)
     sys.exit(exit_code)
 
 if __name__ == "__main__":

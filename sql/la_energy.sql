@@ -15,11 +15,9 @@ WITH raw AS (
   FROM energy.energy_certificates
 )
 SELECT
-  shortfall,
+  AVG(shortfall) as shortfall,
   local_authority_code,
   age,
-  n_rooms
+  n_rooms, COUNT(*) AS n
 FROM raw
-WHERE shortfall IS NOT NULL
-  AND age IS NOT NULL
-  AND n_rooms IS NOT NULL;
+GROUP BY age, n_rooms, local_authority_code;

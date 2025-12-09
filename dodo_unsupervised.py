@@ -4,6 +4,7 @@ from course.utils import load_pg_data
 from course.unsupervised_classification.eda import plot_scatter
 from course.unsupervised_classification.tree import hierarchical_groups, hcluster_analysis
 from course.unsupervised_classification.kmeans import kmeans
+from course.unsupervised_classification.dbscan import dbscan
 
 
 def task_check_cache_data():
@@ -79,4 +80,14 @@ def task_kmeans():
       'targets': ['data_cache/vignettes/supervised_classification/kscatter.html',
                   'data_cache/vignettes/supervised_classification/kcentroids1.html'
                   'data_cache/vignettes/supervised_classification/kcentroids2.html']
+    }
+
+
+def task_dbscan():
+    return {
+      'actions': [lambda: dbscan(eps=0.5, min_samples=5)],
+      'file_dep': ['data_cache/la_collision.csv',
+                   'course/unsupervised_classification/tree.py',
+                   'course/unsupervised_classification/dbscan.py'],
+      'targets': ['data_cache/vignettes/supervised_classification/dbscan_scatter.html']
     }

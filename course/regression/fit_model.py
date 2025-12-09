@@ -18,7 +18,8 @@ def _fit_model(df):
         data=df,
         groups=df["local_authority_code"],
     )
-    return model.fit(reml=True, method="lbfgs", disp=False, maxiter=1000)
+    #return model.fit(reml=True, method="lbfgs", disp=False, maxiter=1000)
+    return model.fit()
 
 
 def _save_model_summary(model, outpath):

@@ -1,9 +1,7 @@
 ---
 title: "Building a classifier to predicting house age"
 author: "Manal Alsaadi"
-format: 
-  html:
-    embed-resources: true
+format: html
 ---
 
 This report summarises the practical work I carried out to run and complete the supervised learning workflow using the provided pipeline. The focus is on the tasks I completed, the additional classifier I implemented, and the results produced by the full pipeline.
@@ -56,12 +54,11 @@ Data on UK Energy Certificates provide information on a wide range of energy-rel
 
 ```{python}
 #| echo: false
+import pandas as pd
 import sys
 import os
 project_root =os.path.abspath("../..")
 sys.path.append(project_root)
-
-import pandas as pd
 from course.utils import find_project_root
 
 base_dir = find_project_root()
@@ -90,10 +87,10 @@ A scatterplot of two of the key variables, coloured by whether the property was 
 
 ```{python}
 #| echo: false
-from IPython.display import HTML
+from IPython.display import IFrame
 
 scatter_path = vignette_dir / "scatterplot.html"
-HTML(scatter_path.read_text())
+IFrame(src=str(scatter_path), width="100%", height=500)
 ```
 
 ## Fitting LDA, QDA and logistic regression classifiers
@@ -141,8 +138,10 @@ The final part of the workflow produces an ROC curve comparing the three classif
 
 ```{python}
 #| echo: false
+from IPython.display import IFrame
+
 roc_path = vignette_dir / "roc.html"
-HTML(roc_path.read_text())
+IFrame(src=str(roc_path), width="100%", height=500)
 ```
 
 The ROC curve allows us to compare the trade-off between true positive rate and false positive rate for LDA, QDA and logistic regression over all possible classification thresholds. The corresponding AUC values summarise overall discrimination ability in a single number for each model. This provides a convenient way to assess which classifier performs best in terms of ranking properties by the probability of belonging to the pre-1930 group.
@@ -152,3 +151,4 @@ The ROC curve allows us to compare the trade-off between true positive rate and 
 | **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
 |----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
 | 01/12/2025     | ChatGPT          | Troubleshooting missing `y_pred_prob.csv` issue; verifying that the fix required modifying `predict.py` and `roc_curve.py` | "The python files are connected. I am getting error in roc_curve.py in y_pred_prob_path and my suspicion is that it is based on some behavior which should be exhibited by the predict.py file but is missing. Please help." | *N/A* | Fixing probability-output stage of the pipeline |
+

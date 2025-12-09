@@ -1,80 +1,207 @@
 ---
 title: "Understanding costs"
-author: "Anonymous"
+author: "Manal Alsaadi"
 format: 
   html:
-    embed-resources: true
     math: mathjax
-
 ---
 
+This report summarises the practical work I carried out to complete the regression workflow for analysing household energy costs and carbon emissions using the provided pipeline. The focus is on the tasks I implemented, how the pipeline is structured, and the results produced by the full workflow.
 
+I was given the following Python files as a partially completed pipeline:
 
-## Your task
+- `eda.py`
+- `fit_model.py`
+- `caterpillar_reffs.py`
+- the automation script `dodo_regression.py`
 
-This material is provided as context to the problem. You should rewrite it as you see fit.
+In addition, the data extraction step relies on an SQL query in `sql/la_energy.sql` and the helper function `load_pg_data` from the course utilities. My task was to ensure that these components work together to:
 
-## The Problem
+1. extract and cache the local-authority level energy data,
+2. generate exploratory boxplots,
+3. fit a mixed-effects regression model, and
+4. produce a caterpillar plot of local-authority random effects.
 
-Data on [Energy Certificates](https://epc.opendatacommunities.org/) were downloaded in March 2025. These certificates are a non-random sample of UK housing, and contain information such as:
+Once the code was implemented and debugged, I was able to run the entire workflow with:
 
-- Property energy efficiency: The core data is the energy efficiency rating, which ranges from A (most efficient) to G (least efficient).
-- CO2 emissions: The data includes information on the building's likely carbon dioxide emissions.
-- Energy costs: Potential costs for heating and lighting the property are provided.
-- Improvement recommendations: Each EPC lists cost-effective ways to improve the building's energy performance.
+```bash
+doit -f dodo_regression.py
+```
 
-We have been asked by a local company to determine whether some local authorities are better than others in terms of reducing the carbon footprint of properties in their area.  However, some authorities have older housing stock which is innately has a larger carbon footprint. Likewise, some have larger properties than others.  The initial brief is to carry out an aggregate data analysis where the unit of analysis is a local authority.  We have been asked to consider the average carbon footprint of a house in a given area conditional on being pre- or post-1930 and having between 1 and 10 heated rooms.  This should let you fit a model which has fixed effects for the number of houses of pre-1930, post-1930 and 1, 2, 3, ..., 10 heated rooms
+and obtain all intermediate data files, model summaries and HTML visualisations without errors.
 
+## Problem overview and data
 
-$$Y_{ji} = \beta_0 + \beta_1 x_{j}^{(\text{old})} + \sum_{r=1}^{10} \beta_r x_{j}^{(r)} + \gamma_j$$
+The analysis is based on data from UK Energy Performance Certificates (EPCs). Each certificate contains information about a property’s energy performance, including an estimate of the energy cost or carbon shortfall relative to an efficiency benchmark. For this coursework, the dataset has already been pre-processed into a local-authority level table stored as
 
-Where 
+- `data_cache/la_energy.csv`
 
-- $Y_{ji}$ is the average carbon dioxide emissions for authority $j$ for each house type $i$ (old/new, 1, 2, ..., 10 rooms)
-- $x_{j}^{(old)}$ is the number of houses that are older than 1930 in authority $j$
-- $x_{j}^r$ are the number of houses with $r=1, 2, ..., 10$ rooms in authority $j$ 
-- $\beta_0$, $\beta_1$, $\beta_r$ are the fixed effects
-- $\gamma_j$ is the random effect for local authority $j$
+via the `task_energy_metrics_la` task in `dodo_regression.py`. This task reads the SQL query in `sql/la_energy.sql`, calls `load_pg_data(QUERY)`, drops rows with missing values and writes the result to CSV.
 
+In the resulting dataset, the key variables used in the regression are:
 
+- `shortfall`: a continuous outcome measuring the energy or emissions shortfall for each certificate,
+- `n_rooms`: the number of heated rooms in the property,
+- `age`: an age category (for example, pre-1930 vs post-1930),
+- `local_authority_code`: an identifier for the local authority in which the property is located.
 
-
-## The Data
-
-Some initial exploratory data analysis shows us how the carbon emissions vary by age of property and by the number of rooms:
-
-
-
-![](../../data_cache/vignettes/regression/boxplot_age.html){width="100%" height="600px"}
-
-![](../../data_cache/vignettes/regression/boxplot_rooms.html){width="100%" height="600px"}
-
-
-## The model
-
-A model can be fitted and a summary of the fixed effects produced
-
+The goal is to understand how much of the variation in `shortfall` can be explained by the number of rooms and age of the property, while also allowing for systematic differences between local authorities. This leads naturally to a mixed-effects regression model with a random intercept for each local authority.
 
 ```{python}
 #| echo: false
-#| eval: true
-#| results: 'asis'
-with open('../../data_cache/vignettes/regression/model_fit.txt') as f:
-    content = f.read()
-    print(content)
+import pandas as pd
+import sys
+import os
+project_root =os.path.abspath("../..")
+sys.path.append(project_root)
+from course.utils import find_project_root
+
+base_dir = find_project_root()
+vignette_dir = base_dir / "data_cache" / "vignettes" / "regression"
 ```
 
+## Exploratory data analysis
 
-## The key insight
+The first part of my work was to implement exploratory plots in `eda.py`. A small helper function `_boxplot` takes a DataFrame, an optional grouping variable and a response variable, and returns an interactive Plotly boxplot. This function is used by two functions:
 
-We've been asked to rate local authority performance, so the most important result is a ``caterpillar plot'' of the random effects.
+- `boxplot_age()`: produces a boxplot of `shortfall` by `age` category,
+- `boxplot_rooms()`: produces a boxplot of `shortfall` by `n_rooms`.
 
+Both functions read `data_cache/la_energy.csv`, call `_boxplot`, and save the resulting HTML files into the regression vignette directory as:
 
-![](../../data_cache/vignettes/regression/caterpillar.html){width="100%" height="600px"}
+- `boxplot_age.html`
+- `boxplot_rooms.html`
 
-##  Additional credit
+The `task_eda` task in `dodo_regression.py` is then responsible for running these functions and ensuring the HTML outputs exist.
 
-For additional credit you might like to enhance the exploratory data analysis. You could consider residual diagnostics to check the validity of the model fit. You may also like to consider the appropriateness of the adjusting variables age and number of rooms. You could consider extracting further variables from the database and fitting a slightly more elaborate model.
+Below I embed the two boxplots produced by the workflow.
+
+### Shortfall by age category
+
+```{python}
+#| echo: false
+from IPython.display import IFrame
+
+age_box_path = vignette_dir / "boxplot_age.html"
+IFrame(src=str(age_box_path), width="100%", height=500)
+```
+
+### Shortfall by number of rooms
+
+```{python}
+#| echo: false
+rooms_box_path = vignette_dir / "boxplot_rooms.html"
+IFrame(src=str(rooms_box_path), width="100%", height=500)
+```
+
+These plots allow us to see how the distribution of `shortfall` changes across property age groups and by the number of heated rooms. In particular, they highlight both the typical shortfall (through the median) and the spread and presence of outliers in each group.
+
+## Mixed-effects regression model
+
+### Model specification
+
+The main statistical model is implemented in `fit_model.py`. The function `_fit_model(df)` uses `statsmodels`’ `mixedlm` to fit a linear mixed-effects model with:
+
+- response: `shortfall`,
+- fixed effects: `n_rooms` and `age`,
+- random intercept: one per `local_authority_code`.
+
+In mathematical notation, for certificate \(i\) in local authority \(j\) the model can be written as:
+
+$$
+\text{shortfall}_{ij}
+= \beta_0
++ \beta_1 \; \text{n\_rooms}_{ij}
++ \beta_2 \; \text{age}_{ij}
++ u_j
++ \varepsilon_{ij},
+$$
+
+where
+
+- \(u_j \sim N(0, \tau^2)\) is the random intercept for local authority \(j\),
+- \(\varepsilon_{ij} \sim N(0, \sigma^2)\) is the individual-level error term,
+- \(\beta_0, \beta_1, \beta_2\) are the fixed-effect coefficients for the intercept, rooms and age respectively.
+
+The function `fit_model()` reads `data_cache/la_energy.csv`, calls `_fit_model(df)`, and then:
+
+1. extracts a tidy table of random effects using the helper `_random_effects(results)`,
+2. saves this table to `data_cache/models/reffs.csv`,
+3. writes a full text summary of the fitted model to `data_cache/vignettes/regression/model_fit.txt`.
+
+The model is fitted using maximum likelihood (`reml=False`) with the `lbfgs` optimiser, which is a stable choice for this dataset.
+
+### Model summary
+
+The following code chunk prints the saved text summary of the fitted mixed-effects model:
+
+```{python}
+#| echo: false
+#| results: 'asis'
+model_summary_path = vignette_dir / "model_fit.txt"
+with open(model_summary_path, "r", encoding="utf-8") as f:
+    print(f.read())
+```
+
+From this summary we can read off the estimated coefficients for `n_rooms` and `age`, their standard errors, and associated \(z\)-statistics and \(p\)-values. The coefficient for `n_rooms` represents the expected change in shortfall when we increase the number of rooms by one, holding age and local authority constant. The coefficient for `age` compares the mean shortfall between age categories, again adjusting for the other variables and the random authority effect.
+
+The variance component for the random intercept shows how much variation in shortfall is attributable to differences between local authorities after controlling for rooms and age.
+
+## Random effects and ranking local authorities
+
+The core task in this coursework is to assess how local authorities differ once we account for the age and size of properties in their area. This is captured by the random intercepts \(u_j\).
+
+In `fit_model.py`, we implemented `_random_effects(results)` to:
+
+- convert the dictionary of random effects from `statsmodels` into a tidy `DataFrame`,
+- ensure that the main column is named `Intercept`,
+- add the local-authority identifier as a `group` column,
+- construct 95% confidence intervals for each random effect using the estimated random-effect variance (via `cov_re`),
+- sort the results by the intercept value for easier plotting.
+
+The resulting CSV `reffs.csv` contains one row per local authority, with columns:
+
+- `Intercept`: estimated random intercept \(\hat{u}_j\),
+- `group`: local authority code,
+- `lower`, `upper`: lower and upper bounds of the 95% confidence interval for \(\hat{u}_j\).
+
+To visualise these random effects, we did `plot_caterpillar()` in `caterpillar_reffs.py`. This function:
+
+1. reads `data_cache/models/reffs.csv`,
+2. uses Plotly to create a caterpillar plot where each authority is a horizontal line with its confidence interval and point estimate,
+3. adds a vertical reference line at zero (the “average” authority),
+4. writes the interactive plot to `data_cache/vignettes/regression/caterpillar.html`.
+
+The corresponding `task_caterpillar_plot` in `dodo_regression.py` ensures that this plot is generated after the model has been fitted.
+
+```{python}
+#| echo: false
+from IPython.display import IFrame
+
+caterpillar_path = vignette_dir / "caterpillar.html"
+IFrame(src=str(caterpillar_path), width="100%", height=500)
+```
+
+Authorities with random intercepts clearly above zero can be interpreted as having larger-than-average shortfalls, even after adjusting for property age and number of rooms. Conversely, authorities with random effects well below zero appear to perform better than average in terms of energy cost or emissions shortfall.
+
+## Putting the pipeline together
+
+Overall, my work on this coursework consisted of:
+
+- implementing the EDA plotting functions and ensuring their outputs are saved in the correct vignette directory,
+- specifying and fitting the mixed-effects regression model with a random intercept per local authority,
+- extracting the random effects and constructing confidence intervals in a tidy format suitable for plotting,
+- building an interactive caterpillar plot that ranks local authorities by their adjusted performance,
+- wiring these components into the `doit` automation script so that a single command runs the full workflow from data extraction to visualisation.
+
+With these pieces in place, the `doit` run completes successfully, generating both numerical summaries and visual outputs that answer the original question: which local authorities appear to have higher or lower energy shortfalls once we control for property age and size?
+
+## Possible extensions
+
+Due to time constraint, I was not do any significant extensions, but there are several natural extensions and diagnostic checks that could be added:
+
+- **Random slopes**: allowing the effect of `n_rooms` to vary across local authorities, not just the intercept.
+- **Model comparison**: using information criteria (AIC/BIC) or likelihood ratio tests to compare different mixed-effects specifications.
 
 
 ## Record of AI use for MTHM503 Regression coursework
@@ -83,12 +210,4 @@ Instructions: You can use this document to record when, how and why you used Gen
 
 | **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
 |----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
-| E.g. 15/07/2025| MS Copilot       | To help create an organised essay structure| ‘Generate ideas for structuring an essay on...’ | [insert link]                          | introduction                  |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
+

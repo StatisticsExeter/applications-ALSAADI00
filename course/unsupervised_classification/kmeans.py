@@ -6,6 +6,7 @@ from pathlib import Path
 from course.utils import find_project_root
 from course.unsupervised_classification.tree import _scatter_clusters, _pca
 
+
 VIGNETTE_DIR = Path('data_cache') / 'vignettes' / 'unsupervised_classification'
 
 

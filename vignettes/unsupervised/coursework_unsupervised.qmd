@@ -5,36 +5,98 @@ format: html
 
 # Introduction
 
-This report summarises the work I did using unsupervised learning techniques. The following command was used:
+This report summarises the work I carried out using unsupervised learning techniques to analyse UK road‑collision data at the local‑authority level. Following feedback from my professor, I begin by clearly describing **the problem**, **the data**, and **how I approached solving it**, rather than only listing outputs of the workflow.
+
+The workflow was executed using the command:
 
 ```
 doit -f dodo_unsupervised.py
 ```
 
-The workflow produced exploratory data analysis, hierarchical clustering, KMeans clustering, and an additional DBSCAN method for extra credit.
+This pipeline generated exploratory data analysis, hierarchical clustering results, KMeans clustering visualisations, and—implemented by me as an extension—DBSCAN clustering.
+
+---
+
+# The problem
+
+The goal of this coursework is to explore **patterns in road‑collision statistics across UK local authorities** using unsupervised learning. Unlike supervised learning, there is no labelled outcome: instead, the aim is to discover whether groups of authorities share similar collision profiles.
+
+In particular, we want to answer questions such as:
+
+- Do certain local authorities experience similar types of collisions?
+- Are there naturally occurring clusters of “high‑collision” vs “low‑collision” authorities?
+- Which authorities behave unusually compared to others?
+
+Unsupervised learning is ideal for this kind of exploratory structural understanding, especially when the data contains multiple correlated variables.
+
+To address these questions, the coursework applies a range of clustering methods—hierarchical clustering, KMeans, and a density‑based method (DBSCAN)—after first reducing dimensionality via PCA.
+
+---
+
+# The data
+
+All analyses are based on a pre‑processed dataset:
+
+- `la_collision.csv`
+
+This file contains collision‑related statistics aggregated at the local‑authority level. Examples of variables include:
+
+- number of slight, serious, and fatal collisions,
+- counts of collisions involving pedestrians, cyclists, and motor vehicles,
+- population‑scaled or area‑scaled collision metrics.
+
+These variables vary widely in scale, so all clustering methods require **standardisation**, which is handled internally by each module in the pipeline.
+
+The dataset is then projected onto its first two **principal components (PCA)** to provide a consistent low‑dimensional visualisation space across all methods.
+
+---
+
+# How I solved the problem
+
+The unsupervised learning pipeline provided several pre‑written modules:
+
+- `eda.py`
+- `hierarchical.py`
+- `kmeans.py`
+- the automation script `dodo_unsupervised.py`
+
+My task was to:
+
+1. run and verify the pipeline,
+2. interpret the unsupervised learning outputs, and
+3. for extra credit, implement an additional clustering method (DBSCAN) in the same style as the existing modules.
+
+To add DBSCAN, I:
+
+- created a new file `dbscan.py`,
+- followed the structure of `kmeans.py` (standardise → fit model → PCA → plot results),
+- ensured correct integration with the `doit` task manager,
+- and produced an interactive HTML scatter plot using the existing helper functions.
+
+After these steps, running the workflow again produced all required plots without errors.
 
 ---
 
 # Exploratory Data Analysis
 
-The exploratory data analysis step creates an initial two-dimensional view of the local authorities based on their collision statistics. The code below embeds the PCA scatter plot produced by the EDA task. Each point represents a local authority, and its position is determined by the first two principal components of the standardised collision variables. This helps reveal broad patterns such as clusters of authorities with similar collision profiles and isolated authorities that behave differently.
+The EDA step creates an initial **PCA scatter plot**, showing each local authority positioned according to the first two principal components of their standardised collision features. This helps identify rough groupings or outliers before formal clustering is applied.
 
 ```{python}
 #| echo: false
 import sys
 import os
-project_root =os.path.abspath("../..")
+project_root = os.path.abspath("../..")
 sys.path.append(project_root)
 from course.utils import find_project_root
 from IPython.display import IFrame
 
 base_dir = find_project_root()
-scatter_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "scatterplot.html"
+scatter_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "scatterplot.html"
 
 IFrame(src=str(scatter_path), width="100%", height=500)
 ```
 
-The code that generated this figure reads the pre-processed `la_collision.csv` file, standardises the numeric features, applies PCA, and then uses a scatter plotting helper to display the projected points.
+The underlying code standardises the numeric variables, performs PCA, and visualises the authorities in 2D space.
 
 ---
 
@@ -42,7 +104,7 @@ The code that generated this figure reads the pre-processed `la_collision.csv` f
 
 ## Dendrogram
 
-The dendrogram below shows how local authorities are merged step by step into larger groups. The vertical axis represents the distance at which clusters are joined, so long branches indicate groups that are relatively distinct before they are merged.
+The hierarchical clustering module constructs a dendrogram, shown below. The vertical axis indicates the distance at which clusters merge; taller branches indicate more distinct groups.
 
 ```{python}
 #| echo: false
@@ -50,16 +112,16 @@ from course.utils import find_project_root
 from IPython.display import IFrame
 
 base_dir = find_project_root()
-dend_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "dendrogram.html"
+dend_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "dendrogram.html"
 
 IFrame(src=str(dend_path), width="100%", height=500)
 ```
 
-The code computes a distance matrix form the standardised data, runs hierarchical clustering, and then plots the resulting tree structure.
+This method begins with each authority as its own cluster and successively merges the closest pairs, building a hierarchical structure of collision‑similarity relationships.
 
 ## Selected Groups
 
-The code cuts the tree at a chosen height to obtain a set of groups. These groups are then projected onto the first two principal components and coloured by cluster label. The next embedded plot shows those selected hierarchical groups on the PCA map.
+After selecting a cut‑height, the chosen groups can be projected into the PCA space and coloured accordingly.
 
 ```{python}
 #| echo: false
@@ -67,22 +129,25 @@ from course.utils import find_project_root
 from IPython.display import IFrame
 
 base_dir = find_project_root()
-hscatter_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "hscatter.html"
+hscatter_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "hscatter.html"
 
 IFrame(src=str(hscatter_path), width="100%", height=500)
 ```
 
-Compact and well-separated coloured regions indicate groups of local authorities that share similar collision characteristics according to the hierarchical model.
+Clear, well‑separated coloured regions suggest meaningful hierarchical clusters.
 
 ---
 
 # KMeans Clustering
 
- The code in `kmeans.py` standardises the data, runs KMeans, projects the cluster assignments into the PCA space, and saves interactive HTML plots. Below the outputs for *k* = 4.
+The KMeans implementation in `kmeans.py` follows this sequence:
+
+1. standardise variables,  
+2. run KMeans with \(k = 4\),  
+3. project clusters into PCA space,  
+4. create HTML visualisations.
 
 ### K = 4
-
-The plot below displays the four-cluster solution.
 
 ```{python}
 #| echo: false
@@ -90,24 +155,30 @@ from course.utils import find_project_root
 from IPython.display import IFrame
 
 base_dir = find_project_root()
-kscatter_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "kscatter.html"
-
-kcentroid1_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "kcentroids1.html"
-
-kcentroid2_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "kcentroids2.html"
+kscatter_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "kscatter.html"
+kcentroid1_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "kcentroids1.html"
+kcentroid2_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "kcentroids2.html"
 
 IFrame(src=str(kscatter_path), width="100%", height=500)
 IFrame(src=str(kcentroid1_path), width="100%", height=500)
 IFrame(src=str(kcentroid2_path), width="100%", height=500)
 ```
 
+The centroid plots show how collision features differ across clusters.
+
 ---
 
 # Additional Method (Extra Credit): DBSCAN
 
-To extend the analysis and obtain extra credit, I implemented a density-based clustering method, DBSCAN, in a new module (`dbscan.py`). The implementation closely follows the structure of `kmeans.py`: it reads the same `la_collision.csv` file, standardises the variables, fits a DBSCAN model, and then uses PCA together with the existing plotting helper to create a scatter plot of the resulting clusters.
+For additional credit, I implemented **DBSCAN**, a density‑based clustering method. Unlike KMeans or hierarchical clustering, DBSCAN does not require specifying the number of clusters. It identifies dense regions and labels sparse points as **noise**, providing a different perspective on unusual local authorities.
 
-DBSCAN does not require specifying the number of clusters in advance. The plot below shows the PCA projection coloured by DBSCAN labels. Authorities labelled as noise are highlighted as a separate category, giving a different view of unusual or atypical collision patterns.
+The workflow for DBSCAN mirrors that of KMeans:
+
+- read `la_collision.csv`,  
+- standardise numeric variables,  
+- fit the DBSCAN model,  
+- run PCA,  
+- visualise labelled points.
 
 ```{python}
 #| echo: false
@@ -115,10 +186,12 @@ from course.utils import find_project_root
 from IPython.display import IFrame
 
 base_dir = find_project_root()
-dbscan_scatter_path=base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "dbscan_scatter.html"
+dbscan_scatter_path = base_dir / "data_cache" / "vignettes" / "unsupervised_classification" / "dbscan_scatter.html"
 
 IFrame(src=str(dbscan_scatter_path), width="100%", height=500)
 ```
+
+Noise points and irregular clusters highlight local authorities with atypical collision patterns.
 
 ---
 
@@ -126,10 +199,11 @@ IFrame(src=str(dbscan_scatter_path), width="100%", height=500)
 
 In this coursework, I:
 
-- Generated an exploratory PCA scatter plot to get an initial view of how local authorities relate based on collision statistics.
-- Applied hierarchical clustering, produced a dendrogram, and visualised selected groups on the PCA map.
-- Ran KMeans clustering for *k* = 4.
-- Implemented a DBSCAN clustering method to obtain a density-based view of the data, including noise points.
+- produced an exploratory PCA scatter plot to understand broad collision‑pattern structures,
+- applied hierarchical clustering and visualised the dendrogram and selected groups,
+- ran KMeans clustering with \(k = 4\),
+- implemented a DBSCAN clustering method for extra credit, and
+- compared how different clustering methods highlight different structures in the data.
 
 ---
 
@@ -137,4 +211,4 @@ In this coursework, I:
 
 | **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
 |----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
-| 12/12/2025    | ChatGPT          | Getting guidance on how to structure my DBSCAN implementation so it followed the same style as my existing kmeans.py code | “I want to add DBSCAN as an extra method. Can you show me how to base the DBSCAN code on my current kmeans.py structure?” | *N/A* | Extra-credit DBSCAN method
+| 12/12/2025     | ChatGPT          | Getting guidance on structuring the DBSCAN implementation | “I want to add DBSCAN as an extra method. Can you show me how to base the DBSCAN code on my current kmeans.py structure?” | *N/A* | Extra-credit DBSCAN method |

@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
+import plotly.express as px
 from pathlib import Path
 from course.utils import find_project_root
+
 
 VIGNETTE_DIR = Path('data_cache') / 'vignettes' / 'regression'
 
@@ -18,7 +20,7 @@ def _fit_model(df):
         data=df,
         groups=df["local_authority_code"],
     )
-    #return model.fit(reml=True, method="lbfgs", disp=False, maxiter=1000)
+    
     return model.fit()
 
 
@@ -45,3 +47,24 @@ def fit_model():
     outpath = VIGNETTE_DIR / 'model_fit.txt'
     _random_effects(results).to_csv(base_dir / 'data_cache' / 'models' / 'reffs.csv')
     _save_model_summary(results, outpath)
+
+    
+    resid = results.resid
+    fitted = results.fittedvalues
+
+    resid_df = pd.DataFrame({
+        "fitted": fitted,
+        "residuals": resid
+    })
+
+    fig_resid = px.scatter(
+        resid_df,
+        x="fitted",
+        y="residuals",
+        title="Residuals vs fitted values",
+        labels={"fitted": "Fitted values", "residuals": "Residuals"},
+    )
+    
+    fig_resid.add_hline(y=0, line_dash="dash")
+    fig_resid.write_html(VIGNETTE_DIR / "residuals_vs_fitted.html")
+

@@ -1,12 +1,37 @@
 ---
-title: "Building a classifier to predicting house age"
+title: "Building a classifier to predict house age"
 author: "Manal Alsaadi"
 format: html
 ---
 
-This report summarises the practical work I carried out to run and complete the supervised learning workflow using the provided pipeline. The focus is on the tasks I completed, the additional classifier I implemented, and the results produced by the full pipeline.
+This report summarises the practical work I carried out to complete the supervised learning workflow using the provided pipeline. Following my professor’s feedback, I begin by clearly describing **the problem**, **the data**, and **how I approached solving it**, before detailing the implementation steps and results.
 
-I was given the following Python files as a partially completed pipeline:
+## The problem
+
+The goal of this coursework is to build a supervised learning model that can **predict whether a house was built before or after 1930**, using features extracted from UK Energy Performance Certificates (EPCs). EPCs contain rich information about properties—including size, insulation, heating systems and energy efficiency—and these features allow us to distinguish older housing stock from more modern properties.
+
+This is a **binary classification problem**, where the response variable is:
+
+- `age_pre_1930` = 1 if the property was built before 1930  
+- `age_pre_1930` = 0 if the property was built after 1930
+
+The task involves fitting multiple classifiers, examining their behaviour, and comparing their predictive performance.
+
+## The data
+
+The dataset supplied to us is a cleaned subset of the UK EPC database. It includes:
+
+- thousands of labelled EPC records,
+- seven predictor variables used for classification (e.g., floor area, energy cost, energy efficiency rating),
+- the binary age indicator described above.
+
+These variables were saved in the pipeline's data cache, with scripts provided to split the data and generate exploratory summaries.
+
+Because EPC data covers a wide range of building types and ages, the predictors show meaningful differences between pre‑1930 and post‑1930 houses—ideal for building statistical classifiers.
+
+## How I solved the problem
+
+The supervised learning workflow was provided as a partially completed pipeline consisting of:
 
 - `split.py`, `split_test_train.py`
 - `eda.py`
@@ -14,41 +39,34 @@ I was given the following Python files as a partially completed pipeline:
 - `classify.py`
 - `predict.py`
 - `roc_curve.py`
-- the automation script `dodo_supervised.py`
+- and the automation script `dodo_supervised.py`.
 
-All functions were already defined, and my task was to run the full workflow using:
+My task was to:
+
+1. **debug and repair the pipeline**, so that all tasks execute in order;  
+2. **implement missing functionality**, especially probability predictions for ROC curves;  
+3. **extend the workflow** by adding logistic regression and ensuring the pipeline compared all three classifiers.
+
+I began by running:
 
 ```bash
 doit -f dodo_supervised.py
 ```
 
-When first running this command, the execution halted due to syntax errors in several of the provided files. I inspected and corrected these issues so that the tasks could run sequentially.
+This immediately produced syntax errors in multiple files. After fixing these, the pipeline progressed until the ROC step failed because the expected probability prediction file `*_y_pred_prob.csv` did not exist. The `predict.py` script produced **only class labels**, but ROC curves require **probability scores**.
 
-After resolving the syntax errors, I encountered a persistent failure related to the ROC curve task:  
-`roc_curve.py` was searching for a file named `*_y_pred_prob.csv`, which did not exist. This indicated that the pipeline expected probability predictions, but the existing `predict.py` only output class labels, not probabilities.
+### Fixes implemented
 
-To fix this, I updated:
+To resolve this, I made several key changes:
 
-- `predict.py` — adding functionality to generate and save prediction probabilities.
-- `roc_curve.py` — ensuring it pointed to the correct probability files rather than class-label CSVs.
+- **Updated `predict.py`** to compute probability predictions (`predict_proba`) and save them correctly.
+- **Updated `roc_curve.py`** so it reads the new probability files and produces correct ROC curves.
+- **Added logistic regression** in `classify.py` for additional credit.
+- **Added logistic regression prediction support** in `predict.py`.
+- **Updated `metrics.py` and the `dodo_supervised.py` orchestration**, enabling metrics to be computed for all models.
+- **Extended the ROC plotting code** so LDA, QDA and logistic regression all appear on one plot.
 
-As an extension for additional credit, I also:
-
-- implemented a **logistic regression** classifier in `classify.py`,
-- added prediction support for this model in `predict.py`,
-- added a metrics task in `metrics.py` and `dodo_supervised.py`, and
-- updated the ROC plotting code so that LDA, QDA and logistic regression are all shown on the same curve.
-
-Once these adjustments were made, the pipeline successfully produced:
-
-- the train/test splits  
-- EDA outputs  
-- LDA, QDA and logistic regression metric tables  
-- the ROC curve HTML visualisation  
-
-and the entire `doit` run completed without errors.
-
-Data on UK Energy Certificates provide information on a wide range of energy-related metrics. For this assessment, the task was to classify whether a house was built before or after 1930 using seven available predictors.
+After these changes, running the workflow produced all expected outputs without errors.
 
 ## Exploratory data analysis
 
@@ -57,7 +75,7 @@ Data on UK Energy Certificates provide information on a wide range of energy-rel
 import pandas as pd
 import sys
 import os
-project_root =os.path.abspath("../..")
+project_root = os.path.abspath("../..")
 sys.path.append(project_root)
 from course.utils import find_project_root
 
@@ -65,7 +83,9 @@ base_dir = find_project_root()
 vignette_dir = base_dir / "data_cache" / "vignettes" / "supervised_classification"
 ```
 
-The dataset contains certificates that have been labelled as pre-1930 or post-1930. Below I show simple frequency information for the outcome variable and basic group summaries for the key predictors used in the classifiers.
+Before fitting any models, I summarised class frequencies and explored the distribution of predictors.
+
+### Class frequencies
 
 ```{python}
 #| echo: false
@@ -75,6 +95,8 @@ df = pd.read_csv(freq_path)
 print(df.round(3).to_markdown(index=False))
 ```
 
+### Summary statistics by age group
+
 ```{python}
 #| echo: false
 #| results: 'asis'
@@ -83,7 +105,7 @@ df = pd.read_csv(grouped_path)
 print(df.round(3).to_markdown(index=False))
 ```
 
-A scatterplot of two of the key variables, coloured by whether the property was built before or after 1930, helps to visualise the separation achieved by these features.
+### Scatterplot of two predictors
 
 ```{python}
 #| echo: false
@@ -93,9 +115,17 @@ scatter_path = vignette_dir / "scatterplot.html"
 IFrame(src=str(scatter_path), width="100%", height=500)
 ```
 
+This plot helps us visualise whether any separation between age groups is visible in the raw features.
+
 ## Fitting LDA, QDA and logistic regression classifiers
 
-The workflow produced summary statistics for all three classifiers. These tables report metrics such as precision, recall and F1-score for each class, as well as overall accuracy.
+The pipeline then fits three models:
+
+- **Linear Discriminant Analysis (LDA)**
+- **Quadratic Discriminant Analysis (QDA)**
+- **Logistic Regression**
+
+For each model, the workflow computes accuracy, precision, recall and F1-score.
 
 ### LDA metrics
 
@@ -130,11 +160,11 @@ df.rename(columns={"Unnamed: 0": "Category"}, inplace=True)
 print(df.round(3).to_markdown(index=False))
 ```
 
-Taken together, these results show how each classifier balances performance across the two age groups. By examining the class-specific precision, recall and F1-scores in the tables above, we can see whether any one method consistently outperforms the others or whether performance is broadly similar across LDA, QDA and logistic regression.
+These tables highlight how each classifier performs across the two age groups, revealing strengths and weaknesses in identifying older houses.
 
-## ROC curve (and AUC) for three classifiers
+## ROC curve and AUC for all classifiers
 
-The final part of the workflow produces an ROC curve comparing the three classifiers on the same test set, along with their AUC values.
+Finally, I produced an ROC curve that overlays all three models for comparison.
 
 ```{python}
 #| echo: false
@@ -144,11 +174,10 @@ roc_path = vignette_dir / "roc.html"
 IFrame(src=str(roc_path), width="100%", height=500)
 ```
 
-The ROC curve allows us to compare the trade-off between true positive rate and false positive rate for LDA, QDA and logistic regression over all possible classification thresholds. The corresponding AUC values summarise overall discrimination ability in a single number for each model. This provides a convenient way to assess which classifier performs best in terms of ranking properties by the probability of belonging to the pre-1930 group.
+The ROC curve, together with the area under the curve (AUC), shows how effectively each model distinguishes pre‑1930 from post‑1930 houses across all thresholds.
 
 ## Record of AI use for MTHM503 supervised coursework
 
 | **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
 |----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
-| 01/12/2025     | ChatGPT          | Troubleshooting missing `y_pred_prob.csv` issue; verifying that the fix required modifying `predict.py` and `roc_curve.py` | "The python files are connected. I am getting error in roc_curve.py in y_pred_prob_path and my suspicion is that it is based on some behavior which should be exhibited by the predict.py file but is missing. Please help." | *N/A* | Fixing probability-output stage of the pipeline |
-
+| 01/12/2025     | ChatGPT          | Troubleshooting missing `y_pred_prob.csv` and updating pipeline components | "What is the issue with below roc_curve function?" | *N/A* | Fixing prediction‑probability stage |
